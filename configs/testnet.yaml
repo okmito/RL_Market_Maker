@@ -1,0 +1,48 @@
+# Binance Testnet Configuration
+# Inherits from base.yaml and overrides for testnet mode
+
+environment: "testnet"
+
+exchange:
+  type: "binance_testnet"
+  testnet_base_url: "https://testnet.binance.vision"
+  testnet_ws_url: "wss://testnet.binance.vision/ws"
+  recv_window: 5000
+  request_timeout: 10
+
+market_data:
+  depth_levels: 20
+  update_speed: "100ms"
+  snapshot_interval: 3600
+
+# Testnet specific
+testnet:
+  api_key_env: "BINANCE_TESTNET_API_KEY"
+  api_secret_env: "BINANCE_TESTNET_API_SECRET"
+  symbol: "BTCUSDT"
+  base_asset: "BTC"
+  quote_asset: "USDT"
+  min_notional: 10.0
+  max_orders_per_second: 10
+  max_orders_per_minute: 1200
+
+simulator:
+  fill_model: "conservative"  # Testnet uses real matching engine
+
+rl_env:
+  max_episode_steps: 1000
+
+training:
+  total_timesteps: 100000
+  checkpoint_freq: 10
+  evaluation_interval: 10
+
+# Risk limits are stricter for testnet
+risk:
+  max_inventory: 0.1
+  max_inventory_ratio: 0.5
+  target_inventory: 0.0
+  max_position_usd: 10000.0
+  max_daily_loss_usd: 500.0
+  max_order_count_per_minute: 50
+  max_open_orders: 10

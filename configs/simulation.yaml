@@ -1,0 +1,48 @@
+# Simulation Configuration
+# Inherits from base.yaml and overrides for simulation mode
+
+environment: "simulation"
+
+exchange:
+  type: "simulated"
+
+simulator:
+  initial_price: 50000.0
+  initial_spread_bps: 10
+  tick_size: 0.01
+  lot_size: 0.0001
+  min_order_size: 0.0001
+  max_order_size: 10.0
+  maker_fee_bps: 1.0
+  taker_fee_bps: 5.0
+  latency_ms: 10
+  fill_model: "queue_aware"
+  volatility: 0.02
+  drift: 0.0
+  mean_reversion: 0.1
+  jump_probability: 0.001
+  jump_size: 0.05
+
+# Synthetic data generation
+synthetic_data:
+  num_steps: 100000
+  regime_changes: 5
+  volatility_regimes:
+    - volatility: 0.01
+      duration: 20000
+    - volatility: 0.03
+      duration: 15000
+    - volatility: 0.015
+      duration: 25000
+    - volatility: 0.04
+      duration: 10000
+    - volatility: 0.02
+      duration: 30000
+
+rl_env:
+  max_episode_steps: 10000
+
+training:
+  total_timesteps: 500000
+  checkpoint_freq: 5
+  evaluation_interval: 25

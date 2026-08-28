@@ -1,0 +1,24 @@
+version: "3.8"
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=simulation
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./logs:/app/logs
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: market_maker
+      POSTGRES_USER: mm
+      POSTGRES_PASSWORD: mm_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:
