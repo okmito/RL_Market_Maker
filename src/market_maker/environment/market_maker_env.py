@@ -47,6 +47,7 @@ class MarketMakingEnv(gym.Env):
         # Action space: 5 continuous values in [-1,1] mapped to quotes
         self.action_space=spaces.Box(low=-1.0, high=1.0, shape=(5,), dtype=np.float32)
         # Observation: depth*4 + mid/spread/imbalance + agent state ~ 50 dims
+        # Observation: depth_levels*4 (bid/ask price+qty) + 10 (3 imbalance + 7 misc) + 8 (agent) = 58 with depth=10. Documented as 58-d (not 50) — see reports/rl_pipeline_audit.md.
         obs_dim = depth_levels*4 + 10 + 8
         self.observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32)
 
@@ -149,23 +150,14 @@ class MarketMakingEnv(gym.Env):
             else:
                 ask_ratio=0
 
-        # Generate quotes
-        bid_price = Decimal(str(mid * (1 + bid_off/10000)))
-        ask_price = Decimal(str(mid * (1 + ask_off/10000)))
-        # Ensure bid < ask and respect tick
-        bid_price = (bid_price/self.tick_size).quantize(Decimal("1"))*self.tick_size
-        ask_price = (ask_price/self.tick_size).quantize(Decimal("1"))*self.tick_size
-        if bid_price >= ask_price:
-            # widen by 1 tick each side
-            bid_price -= self.tick_size
-            ask_price += self.tick_size
-        # Clamp to positive
-        bid_price=max(bid_price, Decimal("0.01"))
-        ask_price=max(ask_price, Decimal("0.01"))
-
+        # Generate quotes via QuoteManager (centralized, verified tick/lot handling)
+        from market_maker.execution.quote_manager import QuoteManager
+        qm = QuoteManager(tick_size=self.tick_size, lot_size=self.lot_size)
         base_qty=Decimal("0.01")
-        bid_qty = (base_qty*Decimal(str(bid_ratio))/self.lot_size).quantize(Decimal("1"))*self.lot_size
-        ask_qty = (base_qty*Decimal(str(ask_ratio))/self.lot_size).quantize(Decimal("1"))*self.lot_size
+        bid_price, ask_price, bid_qty, ask_qty = qm.generate(
+            mid=Decimal(str(mid)), bid_offset_bps=bid_off, ask_offset_bps=ask_off,
+            bid_qty=base_qty*Decimal(str(bid_ratio)), ask_qty=base_qty*Decimal(str(ask_ratio))
+        )
         # Place orders (cancel previous first)
         # Simple: cancel all then place new quotes if qty>0
         import asyncio
@@ -191,15 +183,10 @@ class MarketMakingEnv(gym.Env):
         # Advance market
         self.exchange.step_market(steps=1)
 
-        # Compute reward
+        # Compute reward — pnl_delta already includes fees via cash (SimulatedExchange cash -= commission), so transaction_cost is 0 to avoid double-count. See reward.py and reports/initial_audit.md.
         portfolio=float(self.exchange.portfolio_value)
         spread_bps=self.exchange.order_book.spread_bps() or 0
-        # transaction cost from last fills
-        transaction_cost=0.0
-        for o in self.exchange._orders.values():
-            for f in o.fills:
-                if f.timestamp > time.time()-2:  # approximate recent
-                    transaction_cost+= float(f.commission)
+        transaction_cost=0.0  # Do NOT sum commissions here — already in portfolio_value via cash
         # adverse selection proxy: if inventory and price moved against
         adv=0.0
         if len(self.exchange._price_history)>=2:

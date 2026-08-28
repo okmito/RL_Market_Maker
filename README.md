@@ -25,7 +25,7 @@ graph TD
 
 ## RL Formulation
 
-**Observation** — depth levels ×4 (bid/ask price offset from mid, qty), imbalance, spread_bps, microprice offset, `weighted_mid`, inventory/ratio, cash, PnL, open orders, step ratio. Normalized, no future leakage (timestamp-aware).
+**Observation** — 58-d `Box(low=-inf,high=inf)` with depth 10: 40 (10×bid/ask price offset+qty) + 3 imbalance (1/5/10) + 2 spread/micro + 7 misc (spread, micro, inv ratio, cash, portfolio, inv*mid, open orders, step) + 1 wmid offset + 8 agent padding. Normalized `nan_to_num`, no future leakage (timestamp-aware). See `reports/rl_pipeline_audit.md` §5.
 
 **Action** — `Box([-1,-1,-1,-1,-1], [1,1,1,1,1])`:
 - `bid_offset_bps = a0*50`, `ask_offset_bps = a1*50`

@@ -13,6 +13,11 @@ class QuoteManager:
         bid = self.round_price(mid*Decimal(str(1+bid_offset_bps/10000)))
         ask = self.round_price(mid*Decimal(str(1+ask_offset_bps/10000)))
         if bid>=ask:
-            bid-=self.tick_size
-            ask+=self.tick_size
+            # Crossed or inverted: force valid spread around mid
+            mid_r = self.round_price(mid)
+            spread = max(self.tick_size*2, abs(bid-ask)+self.tick_size*2)
+            bid = self.round_price(mid_r - spread/2)
+            ask = self.round_price(mid_r + spread/2)
+            if bid>=ask:
+                ask = bid + self.tick_size
         return bid, ask, self.round_qty(bid_qty), self.round_qty(ask_qty)

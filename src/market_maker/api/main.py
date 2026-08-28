@@ -60,7 +60,7 @@ th:first-child,td:first-child{text-align:left}
 </head>
 <body>
 <div class="header">
-  <div class="brand"><span class="dot"></span> RL Market Maker <span class="badge">ENV: simulation • BTCUSDT • Testnet-safe</span></div>
+  <div class="brand"><span class="dot"></span> RL Market Maker <span class="badge">ENV: simulation • BTCUSDT • Testnet-safe • SIMULATED MOCK</span></div>
   <div class="controls">
     <span class="pill ok" id="agentStatus">● Agent idle</span>
     <span class="pill" id="riskStatus">Risk OK</span>
@@ -203,7 +203,7 @@ pushLog('Dashboard loaded — polling /status every 1s');
 
 @app.get("/status")
 def status():
-    # Stub status - in production query SimulatedExchange / BinanceTestnetExchange and env
+    # SIMULATED MOCK — not live exchange state. Labeled MOCK per audit. Wire to SimulatedExchange/BinanceTestnetExchange for real.
     # Simulated live-ish values for demo
     mid = 50000 + random.uniform(-150,150)
     spread_bps = random.uniform(6,18)

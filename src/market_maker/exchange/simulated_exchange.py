@@ -197,36 +197,15 @@ class SimulatedExchange(ExchangeBase):
         for oid, order in list(self._orders.items()):
             if not order.is_active or order.price is None:
                 continue
-            fill=False
-            is_maker=True
-            if order.side == OrderSide.BUY:
-                # Buy fills if market ask <= order price or mid sufficiently low
-                best_ask = self.order_book.best_ask()
-                if best_ask and best_ask[0] <= order.price:
-                    if self.fill_model == "conservative":
-                        fill = self._rng.random() < 0.7
-                    else:  # queue_aware
-                        qp = self._queue_position.get(oid, 0.5)
-                        # Deteriorate queue: higher qp = less fill prob; also depth matters
-                        fill_prob = 0.8 * (1 - qp*0.6)
-                        # adverse selection: if price moving against us reduce fill
-                        fill = self._rng.random() < fill_prob
-                # Taker-like if order price crosses spread aggressively
-                elif order.price >= mid + self.tick_size*5:
-                    fill = self._rng.random() < 0.9
-                    is_maker=False
-            else: # SELL
-                best_bid = self.order_book.best_bid()
-                if best_bid and best_bid[0] >= order.price:
-                    if self.fill_model == "conservative":
-                        fill = self._rng.random() < 0.7
-                    else:
-                        qp = self._queue_position.get(oid, 0.5)
-                        fill_prob = 0.8 * (1 - qp*0.6)
-                        fill = self._rng.random() < fill_prob
-                elif order.price <= mid - self.tick_size*5:
-                    fill = self._rng.random() < 0.9
-                    is_maker=False
+            # Use fills.py helper for DRY — logic verified in tests/test_no_lookahead
+            from market_maker.environment.fills import FillConfig, should_fill
+            best_bid = self.order_book.best_bid()
+            best_ask = self.order_book.best_ask()
+            bid_px = float(best_bid[0]) if best_bid else float(mid)-1
+            ask_px = float(best_ask[0]) if best_ask else float(mid)+1
+            qp = self._queue_position.get(oid, 0.5)
+            fill_cfg = FillConfig(model=self.fill_model)  # type: ignore
+            fill, is_maker = should_fill(float(order.price), bid_px, ask_px, order.side.value, qp, fill_cfg, self._rng)
             if fill:
                 exec_qty = order.remaining_qty
                 # Partial fills occasionally
